@@ -1,0 +1,13 @@
+{
+  "apiVersion": "gpu.platform/v1",
+  "kind": "InferenceCluster",
+  "metadata": { "name": "llama-prod" },
+  "spec": {
+    "gpuModel": "H100",
+    "gpus": 16,
+    "gpusPerHost": 8,
+    "topology": { "interconnect": "infiniband", "rack": "r12" },
+    "driverVersion": "550.90.07",
+    "cudaVersion": "12.4"
+  }
+}

@@ -1,0 +1,51 @@
+# Local stack: Temporal dev server + Redpanda (Kafka API) + worker + API.
+# Run `make tidy` first so the Dockerfile can `go mod download`.
+services:
+  temporal:
+    image: temporalio/temporal:latest
+    command: ["server", "start-dev", "--ip", "0.0.0.0"]
+    ports:
+      - "7233:7233"   # gRPC frontend
+      - "8233:8233"   # Web UI -> http://localhost:8233
+
+  redpanda:
+    image: redpandadata/redpanda:latest
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp=1
+      - --memory=512M
+      - --reserve-memory=0M
+      - --node-id=0
+      - --check=false
+      - --kafka-addr=PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr=PLAINTEXT://redpanda:9092
+    ports:
+      - "9092:9092"
+
+  worker:
+    build: { context: .., target: worker }
+    # Runs the simulator-backed activities, the health-event remediator, and
+    # the fault-injection admin endpoint used by scripts/demo.sh.
+    command: ["-remediator", "-sim-admin", ":9090"]
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      KAFKA_BROKERS: redpanda:9092
+      KAFKA_TOPIC: gpu.host.events
+      KAFKA_GROUP: gpu-remediator
+    ports:
+      - "9090:9090"
+    depends_on: [temporal, redpanda]
+    restart: on-failure
+
+  api:
+    build: { context: .., target: api }
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      KAFKA_BROKERS: redpanda:9092
+      KAFKA_TOPIC: gpu.host.events
+    ports:
+      - "8080:8080"
+    depends_on: [temporal, redpanda]
+    restart: on-failure

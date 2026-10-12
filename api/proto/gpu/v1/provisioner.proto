@@ -1,0 +1,70 @@
+// Optional gRPC contract mirroring the REST API in internal/api.
+//
+// NOTE: only the REST transport is implemented in this repository. This file
+// is the starting point for a gRPC front end; generate stubs with protoc (or
+// buf) and implement the service on top of api.Orchestrator, which is
+// transport-agnostic.
+syntax = "proto3";
+
+package gpu.v1;
+
+option go_package = "github.com/aniketmalpure/gpu-host-provisioner/api/gen/gpu/v1;gpuv1";
+
+service Provisioner {
+  rpc ApplyCluster(ApplyClusterRequest) returns (ApplyClusterResponse);
+  rpc GetCluster(GetClusterRequest) returns (Cluster);
+  rpc DeleteCluster(DeleteClusterRequest) returns (DeleteClusterResponse);
+  rpc GetHost(GetHostRequest) returns (Host);
+  rpc ReportHealth(ReportHealthRequest) returns (ReportHealthResponse);
+}
+
+message ClusterSpec {
+  string gpu_model = 1;
+  int32 gpus = 2;
+  int32 gpus_per_host = 3;
+  string interconnect = 4;
+  string rack = 5;
+  string driver_version = 6;
+  string cuda_version = 7;
+}
+
+message ApplyClusterRequest {
+  string name = 1;
+  ClusterSpec spec = 2;
+}
+message ApplyClusterResponse {
+  bool created = 1;
+  int32 hosts = 2;
+}
+
+message GetClusterRequest { string name = 1; }
+message DeleteClusterRequest { string name = 1; }
+message DeleteClusterResponse {}
+
+message HostSummary {
+  string id = 1;
+  string state = 2;
+}
+
+message Cluster {
+  string name = 1;
+  string phase = 2;
+  ClusterSpec spec = 3;
+  int32 desired_hosts = 4;
+  int32 ready_hosts = 5;
+  int32 failed_hosts = 6;
+  repeated HostSummary hosts = 7;
+}
+
+message GetHostRequest { string id = 1; }
+message Host {
+  string id = 1;
+  string state = 2;
+  int64 version = 3;
+}
+
+message ReportHealthRequest {
+  string host_id = 1;
+  string reason = 2;
+}
+message ReportHealthResponse { string event_id = 1; }
